@@ -147,7 +147,7 @@ echo "✓ PostgreSQL listo"
 echo
 echo "=== Ejecutando tests ==="
 
-go test ./... -v
+go test ./tests/... -v
 
 echo
 echo "======================================"
