@@ -1,13 +1,50 @@
-# Cómo arrancar el servidor
+# Catálogo de películas
 
-1. Abrí una terminal en la carpeta del proyecto.
+Proyecto de un catálogo para agregar, editar, borrar y listar películas con su descripción, título, año de lanzamiento, clasificación, género, duración y directores.
 
-2. Ejecutá:
+Actualmente el servidor muestra una página de presentación. El esquema y las consultas SQL están preparados, pero el servidor todavía no se conecta a PostgreSQL ni expone operaciones CRUD.
 
-go run main.go
+## Arrancar el servidor
 
-3. Abrí en el navegador:
+Desde la carpeta del proyecto, con Go 1.22.2 o superior:
 
-http://localhost:8080
+```bash
+go run .
+```
 
-4. Para detener el servidor, presioná `Ctrl + C` en la terminal.
+Abrí http://localhost:8080. Para detener el servidor, presioná `Ctrl + C`.
+Las páginas HTML se incluyen en el binario al compilar.
+
+## Persistencia
+
+Para levantar PostgreSQL con Docker Compose:
+
+```bash
+docker compose up -d
+```
+
+La base local usa el puerto 5432, la base `moviesdb` y el usuario y contraseña `postgres`.
+El esquema `db/schema/movie.sql` se carga al inicializar un volumen vacío. Cambiar ese archivo no modifica una base ya inicializada.
+
+Las consultas están en `db/queries/queries.sql` y el código generado en `db/sqlc/`.
+Después de cambiar el esquema o las consultas, regenerá el código con sqlc:
+
+```bash
+sqlc generate
+```
+
+Para detener PostgreSQL conservando los datos:
+
+```bash
+docker compose down
+```
+
+## Tests
+
+```bash
+./test.sh
+```
+
+El script compila el proyecto y ejecuta los tests HTTP con `go test ./... -v`.
+No requiere Docker ni sqlc y no modifica los datos de PostgreSQL.
+También podés ejecutar directamente `go test ./...`.
