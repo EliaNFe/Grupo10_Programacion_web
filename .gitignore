@@ -1,0 +1,5 @@
+#env file
+#aca iria el archivo .env
+
+#sqlc
+/db/sqlc/
