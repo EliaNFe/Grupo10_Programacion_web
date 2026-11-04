@@ -1,8 +1,46 @@
-<html>
-<head><title>Peliculas</title></head>
-<body><h1 style="text-align: center;">Catalogo de Peliculas</h1></body>
-<p style="text-align: center;">Vamos a hacer un catalogo de peliculas, que liste todas las peliculas disponibles,
-     con su descripcion, titulo,
-     año de lanzamiento, clasificación, 
-     genero, duracion (en minutos) y directores.</p>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catálogo de películas</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Catálogo de películas</h1>
+  </header>
+
+  <main class="layout">
+    <section class="card">
+      <h2 id="form-title">Agregar película</h2>
+      <form id="movie-form">
+        <label>Título
+          <input type="text" id="title" maxlength="255" required>
+        </label>
+        <label>Descripción
+          <input type="text" id="description" maxlength="255" required>
+        </label>
+        <label>Fecha de estreno
+          <input type="date" id="release_date" required>
+        </label>
+        <label>Duración (minutos)
+          <input type="number" id="duration" min="1" required>
+        </label>
+        <div class="form-buttons">
+          <button type="submit" id="submit-btn">Agregar</button>
+          <button type="button" id="cancel-btn" class="secondary" hidden>Cancelar</button>
+        </div>
+        <p id="message" class="message" role="alert"></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Películas</h2>
+      <ul id="movie-list"></ul>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
 </html>
