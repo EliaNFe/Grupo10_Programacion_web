@@ -1,0 +1,39 @@
+package views
+
+import (
+	"strconv"
+
+	dbsqlc "tp/db/sqlc"
+)
+
+templ MovieList(movies []dbsqlc.ListMoviesRow) {
+	<article>
+		<h2>Películas</h2>
+		if len(movies) == 0 {
+			<p>Todavía no hay películas cargadas.</p>
+		} else {
+			<figure>
+				<table class="striped">
+					<thead>
+						<tr>
+							<th>Título</th>
+							<th>Descripción</th>
+							<th>Estreno</th>
+							<th>Duración</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, m := range movies {
+							<tr>
+								<td>{ m.Title }</td>
+								<td>{ m.Description }</td>
+								<td>{ m.ReleaseDate.Format("2006-01-02") }</td>
+								<td>{ strconv.Itoa(int(m.Duration)) } min</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</figure>
+		}
+	</article>
+}

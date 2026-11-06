@@ -1,0 +1,26 @@
+package views
+
+templ Layout(title string) {
+	<!DOCTYPE html>
+	<html lang="es">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ title }</title>
+			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.indigo.min.css"/>
+			<style>
+				body > header { padding-bottom: 0; }
+				main { padding-top: 1rem; }
+				article { margin-bottom: 2rem; }
+			</style>
+		</head>
+		<body>
+			<header class="container">
+				<h1>Catálogo de películas</h1>
+			</header>
+			<main class="container">
+				{ children... }
+			</main>
+		</body>
+	</html>
+}

@@ -1,0 +1,11 @@
+#env file
+#aca iria el archivo .env
+
+#sqlc
+/db/sqlc/
+
+#templ
+*_templ.go
+
+#servidor en segundo plano (binario y logs)
+/.run/

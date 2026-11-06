@@ -1,0 +1,10 @@
+package views
+
+import dbsqlc "tp/db/sqlc"
+
+templ IndexPage(movies []dbsqlc.ListMoviesRow) {
+	@Layout("Catálogo de películas") {
+		@MovieForm()
+		@MovieList(movies)
+	}
+}
