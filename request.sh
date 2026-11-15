@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+# Levanta PostgreSQL y el servidor, y verifica con curl la página SSR y el formulario.
+set -euo pipefail
+
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+
+[[ -f .env ]] || { echo "No existe el archivo .env"; exit 1; }
+set -a; source .env; set +a
+
+BASE="http://localhost:${SERVER_PORT:-8080}"
+TMP_DIR="$(mktemp -d)"
+BODY_FILE="$TMP_DIR/body"
+HEADERS_FILE="$TMP_DIR/headers"
+
+cleanup() {
+    echo
+    echo "=== Deteniendo servidor y limpiando contenedores/volúmenes ==="
+    bash ./stop-server.sh || true
+    bash ./stop-db.sh || true
+    rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
+
+bash ./start-db.sh
+bash ./start-server.sh
+
+FAILS=0
+CHECKS=0
+
+pass() {
+    CHECKS=$((CHECKS + 1))
+    echo "  OK: $1"
+}
+
+fail() {
+    CHECKS=$((CHECKS + 1))
+    FAILS=$((FAILS + 1))
+    echo "  FAIL: $1"
+}
+
+expect_status() {
+    local expected=$1 actual=$2 label=$3
+    if [[ "$actual" == "$expected" ]]; then
+        pass "$label (HTTP $actual)"
+    else
+        fail "$label (esperaba HTTP $expected, obtuvo $actual)"
+    fi
+}
+
+expect_contains() {
+    local needle=$1 label=$2
+    if grep -Fq "$needle" "$BODY_FILE"; then
+        pass "$label"
+    else
+        fail "$label (no se encontró '$needle')"
+    fi
+}
+
+expect_not_contains() {
+    local needle=$1 label=$2
+    if ! grep -Fq "$needle" "$BODY_FILE"; then
+        pass "$label"
+    else
+        fail "$label (apareció '$needle' y no debía)"
+    fi
+}
+
+echo
+echo "=== 1. GET / inicial (formulario y lista vacía) ==="
+STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' "$BASE/")
+expect_status 200 "$STATUS" "GET / devuelve 200"
+expect_contains '<form method="post" action="/movies">' "Muestra el formulario"
+expect_contains 'Todavía no hay películas cargadas.' "Muestra mensaje de lista vacía"
+
+echo
+echo "=== 2. POST /movies crea película y redirige con 303 a / ==="
+STATUS=$(curl -s -D "$HEADERS_FILE" -o "$BODY_FILE" -w '%{http_code}' -X POST "$BASE/movies" \
+    --data-urlencode "title=Interstellar" \
+    --data-urlencode "description=Ciencia ficción" \
+    --data-urlencode "release_date=2014-11-07" \
+    --data-urlencode "duration=169")
+expect_status 303 "$STATUS" "POST /movies devuelve 303 See Other"
+if grep -iq '^Location: /' "$HEADERS_FILE"; then
+    pass "Header Location apunta a /"
+else
+    fail "Header Location no apunta a /"
+fi
+
+echo
+echo "=== 3. POST /movies con caracteres especiales (escape HTML) ==="
+STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' -X POST "$BASE/movies" \
+    --data-urlencode "title=Matrix <script>alert(1)</script>" \
+    --data-urlencode "description=Acción & fantasía" \
+    --data-urlencode "release_date=1999-03-31" \
+    --data-urlencode "duration=136")
+expect_status 303 "$STATUS" "POST /movies con caracteres HTML devuelve 303"
+
+echo
+echo "=== 4. GET / muestra las películas en orden de creación y escapa HTML ==="
+STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' "$BASE/")
+expect_status 200 "$STATUS" "GET / devuelve 200"
+expect_not_contains 'Todavía no hay películas cargadas.' "Ya no muestra lista vacía"
+expect_contains 'Interstellar' "Muestra la primera película"
+expect_contains 'Matrix &lt;script&gt;alert(1)&lt;/script&gt;' "Escapa tags HTML en el título"
+expect_contains 'Acción &amp; fantasía' "Escapa ampersand en la descripción"
+expect_not_contains '<script>alert(1)</script>' "No inyecta el tag <script> sin escapar"
+
+LINE_1=$(grep -n 'Interstellar' "$BODY_FILE" | head -n1 | cut -d: -f1 || echo 0)
+LINE_2=$(grep -n 'Matrix' "$BODY_FILE" | head -n1 | cut -d: -f1 || echo 0)
+if [[ "$LINE_1" -gt 0 && "$LINE_2" -gt "$LINE_1" ]]; then
+    pass "Las películas aparecen en orden de creación"
+else
+    fail "Las películas no están en el orden esperado"
+fi
+
+echo
+echo "=== 5. Datos inválidos devuelven 400 y no se guardan ==="
+STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' -X POST "$BASE/movies" \
+    --data-urlencode "title=   " \
+    --data-urlencode "description=Sin título" \
+    --data-urlencode "release_date=2020-01-01" \
+    --data-urlencode "duration=100")
+expect_status 400 "$STATUS" "Título vacío devuelve 400"
+
+STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' -X POST "$BASE/movies" \
+    --data-urlencode "title=Pelicula invalida" \
+    --data-urlencode "description=Fecha mal" \
+    --data-urlencode "release_date=31/12/2020" \
+    --data-urlencode "duration=100")
+expect_status 400 "$STATUS" "Fecha inválida devuelve 400"
+
+STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' -X POST "$BASE/movies" \
+    --data-urlencode "title=Pelicula invalida" \
+    --data-urlencode "description=Duración 0" \
+    --data-urlencode "release_date=2020-01-01" \
+    --data-urlencode "duration=0")
+expect_status 400 "$STATUS" "Duración <= 0 devuelve 400"
+
+STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' "$BASE/")
+expect_not_contains 'Pelicula invalida' "Los datos inválidos no se guardaron en la base"
+
+echo
+echo "=== 6. Rutas y métodos no soportados devuelven 404 y 405 ==="
+STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' "$BASE/ruta-inexistente")
+expect_status 404 "$STATUS" "Ruta inexistente devuelve 404"
+
+STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' -X DELETE "$BASE/")
+expect_status 405 "$STATUS" "Método no permitido en / devuelve 405"
+
+echo
+if [[ "$FAILS" -eq 0 ]]; then
+    echo "=== OK: $CHECKS verificaciones pasaron ==="
+else
+    echo "=== FALLARON $FAILS de $CHECKS verificaciones ==="
+    exit 1
+fi

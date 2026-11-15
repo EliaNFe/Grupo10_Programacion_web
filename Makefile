@@ -1,6 +1,14 @@
+export PATH := $(PATH):$(shell go env GOPATH)/bin
+
 .PHONY: run test generate
 
 # Levanta todo (DB, sqlc, templ, servidor) y prueba la página y el formulario
+run:
+	bash ./request.sh
+
+# Genera el código, levanta PostgreSQL y ejecuta los tests de sqlc
+test:
+	bash ./test.sh
 
 # Genera el código de sqlc y de templ
 generate:
