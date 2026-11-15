@@ -35,6 +35,8 @@ Navegador  →  GET /   (muestra la lista actualizada)
 
 Correr `./dependencias.sh` para verificar o instalar Go, Docker, sqlc y templ (v0.2.793).
 
+> **Nota sobre permisos de Docker:** Si al ejecutar `docker compose` o `make up` aparece un error de permisos (`permission denied while trying to connect to the docker API`), se debe a que el usuario recién fue agregado al grupo `docker`. Debería solucionarse cerrando y volviendo a iniciar la sesión del sistema (o ejecutando `sudo usermod -aG docker $USER && newgrp docker` en la terminal actual).
+
 ## Generar código
 
 El código de `db/sqlc/` y los archivos `views/*_templ.go` se generan y no se suben al repo:
