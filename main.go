@@ -21,7 +21,7 @@ func main() {
 	}
 	port := ":" + cfg.ServerPort
 
-	// Conexión a la base (los datos vienen de la configuración)
+	// Conexión a la base
 	conn, err := sql.Open("postgres", cfg.DatabaseURL())
 	if err != nil {
 		fmt.Printf("Error al abrir la base: %s\n", err)
@@ -42,6 +42,7 @@ func main() {
 	// Rutas HTTP
 	http.HandleFunc("/", movieHandler.IndexPage)
 	http.HandleFunc("POST /movies", movieHandler.CreateMovie)
+	http.HandleFunc("DELETE /movies/{id}", movieHandler.DeleteMovie)
 
 	fmt.Printf("servidor escuchando en http://localhost%s\n", port)
 	if err := http.ListenAndServe(port, nil); err != nil {

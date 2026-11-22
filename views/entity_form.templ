@@ -3,7 +3,20 @@ package views
 templ MovieForm() {
 	<article>
 		<h2>Agregar película</h2>
-		<form method="post" action="/movies">
+		<!-- 
+			hx-post: envía la petición por AJAX (por detrás) al servidor
+			hx-target: apunta a qué elemento va a modificar(#movie-list)
+			hx-swap: reemplaza el elemento entero viejo por el nuevo que manda el sv
+			hx-on::after-request: si la petición fue exitosa, limpia los campos del formulario
+		-->
+		<form
+			method="post"
+			action="/movies"
+			hx-post="/movies"
+			hx-target="#movie-list"
+			hx-swap="outerHTML"
+			hx-on::after-request="if(event.detail.successful) this.reset()"
+		>
 			<label>
 				Título
 				<input type="text" name="title" maxlength="255" placeholder="Interstellar" required/>

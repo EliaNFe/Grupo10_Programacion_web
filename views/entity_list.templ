@@ -1,13 +1,14 @@
 package views
 
 import (
+	"fmt"
 	"strconv"
 
 	dbsqlc "tp/db/sqlc"
 )
 
 templ MovieList(movies []dbsqlc.ListMoviesRow) {
-	<article>
+	<article id="movie-list">
 		<h2>Películas</h2>
 		if len(movies) == 0 {
 			<p>Todavía no hay películas cargadas.</p>
@@ -20,6 +21,7 @@ templ MovieList(movies []dbsqlc.ListMoviesRow) {
 							<th>Descripción</th>
 							<th>Estreno</th>
 							<th>Duración</th>
+							<th>Acciones</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -29,6 +31,18 @@ templ MovieList(movies []dbsqlc.ListMoviesRow) {
 								<td>{ m.Description }</td>
 								<td>{ m.ReleaseDate.Format("2006-01-02") }</td>
 								<td>{ strconv.Itoa(int(m.Duration)) } min</td>
+								<td>
+									<button
+										class="secondary outline"
+										style="padding: 0.25rem 0.5rem; margin: 0; font-size: 0.85rem;"
+										hx-delete={ fmt.Sprintf("/movies/%d", m.ID) }
+										hx-target="closest tr"
+										hx-swap="outerHTML"
+										hx-confirm="¿Seguro que querés borrar esta película?"
+									>
+										Borrar
+									</button>
+								</td>
 							</tr>
 						}
 					</tbody>

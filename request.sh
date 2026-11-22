@@ -75,22 +75,21 @@ echo
 echo "=== 1. GET / inicial (formulario y lista vacía) ==="
 STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' "$BASE/")
 expect_status 200 "$STATUS" "GET / devuelve 200"
-expect_contains '<form method="post" action="/movies">' "Muestra el formulario"
+expect_contains '<form' "Muestra el formulario"
+expect_contains 'hx-post="/movies"' "El formulario incluye hx-post"
 expect_contains 'Todavía no hay películas cargadas.' "Muestra mensaje de lista vacía"
 
 echo
-echo "=== 2. POST /movies crea película y redirige con 303 a / ==="
-STATUS=$(curl -s -D "$HEADERS_FILE" -o "$BODY_FILE" -w '%{http_code}' -X POST "$BASE/movies" \
+echo "=== 2. POST /movies (HTMX) crea película y devuelve el HTML de la lista ==="
+STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' -X POST "$BASE/movies" \
     --data-urlencode "title=Interstellar" \
     --data-urlencode "description=Ciencia ficción" \
     --data-urlencode "release_date=2014-11-07" \
     --data-urlencode "duration=169")
-expect_status 303 "$STATUS" "POST /movies devuelve 303 See Other"
-if grep -iq '^Location: /' "$HEADERS_FILE"; then
-    pass "Header Location apunta a /"
-else
-    fail "Header Location no apunta a /"
-fi
+expect_status 200 "$STATUS" "POST /movies devuelve 200 OK"
+expect_contains 'id="movie-list"' "Devuelve el contenedor de la lista de películas"
+expect_contains 'Interstellar' "El HTML devuelto contiene la nueva película"
+expect_contains 'hx-delete=' "Cada elemento contiene el botón con hx-delete"
 
 echo
 echo "=== 3. POST /movies con caracteres especiales (escape HTML) ==="
@@ -99,7 +98,10 @@ STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' -X POST "$BASE/movies" \
     --data-urlencode "description=Acción & fantasía" \
     --data-urlencode "release_date=1999-03-31" \
     --data-urlencode "duration=136")
-expect_status 303 "$STATUS" "POST /movies con caracteres HTML devuelve 303"
+expect_status 200 "$STATUS" "POST /movies con caracteres HTML devuelve 200 OK"
+expect_contains 'Matrix &lt;script&gt;alert(1)&lt;/script&gt;' "Escapa tags HTML en el título"
+expect_contains 'Acción &amp; fantasía' "Escapa ampersand en la descripción"
+expect_not_contains '<script>alert(1)</script>' "No inyecta el tag <script> sin escapar"
 
 echo
 echo "=== 4. GET / muestra las películas en orden de creación y escapa HTML ==="
@@ -107,20 +109,29 @@ STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' "$BASE/")
 expect_status 200 "$STATUS" "GET / devuelve 200"
 expect_not_contains 'Todavía no hay películas cargadas.' "Ya no muestra lista vacía"
 expect_contains 'Interstellar' "Muestra la primera película"
-expect_contains 'Matrix &lt;script&gt;alert(1)&lt;/script&gt;' "Escapa tags HTML en el título"
-expect_contains 'Acción &amp; fantasía' "Escapa ampersand en la descripción"
-expect_not_contains '<script>alert(1)</script>' "No inyecta el tag <script> sin escapar"
+expect_contains 'Matrix' "Muestra la segunda película"
 
-LINE_1=$(grep -n 'Interstellar' "$BODY_FILE" | head -n1 | cut -d: -f1 || echo 0)
-LINE_2=$(grep -n 'Matrix' "$BODY_FILE" | head -n1 | cut -d: -f1 || echo 0)
-if [[ "$LINE_1" -gt 0 && "$LINE_2" -gt "$LINE_1" ]]; then
+BODY_CONTENT=$(cat "$BODY_FILE")
+REST="${BODY_CONTENT#*Interstellar}"
+if [[ "$BODY_CONTENT" != "$REST" && "$REST" == *Matrix* ]]; then
     pass "Las películas aparecen en orden de creación"
 else
     fail "Las películas no están en el orden esperado"
 fi
 
 echo
-echo "=== 5. Datos inválidos devuelven 400 y no se guardan ==="
+echo "=== 5. DELETE /movies/{id} (HTMX) elimina película y devuelve 200 ==="
+# Extraer un ID de película existente de la respuesta anterior
+MOVIE_ID=$(grep -o '/movies/[0-9]\+' "$BODY_FILE" | head -n1 | cut -d/ -f3 || echo 1)
+STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' -X DELETE "$BASE/movies/$MOVIE_ID")
+expect_status 200 "$STATUS" "DELETE /movies/$MOVIE_ID devuelve 200 OK"
+
+# Verificar que ya no aparece en GET /
+STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' "$BASE/")
+expect_not_contains "/movies/$MOVIE_ID" "La película borrada ya no figura en la lista"
+
+echo
+echo "=== 6. Datos inválidos devuelven 400 y no se guardan ==="
 STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' -X POST "$BASE/movies" \
     --data-urlencode "title=   " \
     --data-urlencode "description=Sin título" \
@@ -146,11 +157,11 @@ STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' "$BASE/")
 expect_not_contains 'Pelicula invalida' "Los datos inválidos no se guardaron en la base"
 
 echo
-echo "=== 6. Rutas y métodos no soportados devuelven 404 y 405 ==="
+echo "=== 7. Rutas y métodos no soportados devuelven 404 y 405 ==="
 STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' "$BASE/ruta-inexistente")
 expect_status 404 "$STATUS" "Ruta inexistente devuelve 404"
 
-STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' -X DELETE "$BASE/")
+STATUS=$(curl -s -o "$BODY_FILE" -w '%{http_code}' -X PUT "$BASE/")
 expect_status 405 "$STATUS" "Método no permitido en / devuelve 405"
 
 echo

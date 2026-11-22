@@ -1,6 +1,6 @@
 -include .env
 export
-export PATH := $(PATH):$(shell go env GOPATH)/bin
+export PATH := $(PATH):$(shell go env GOPATH)/bin:/snap/bin
 
 SERVER_PORT ?= 8080
 BASE_URL := http://localhost:$(SERVER_PORT)

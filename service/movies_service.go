@@ -72,3 +72,7 @@ func (s *MovieService) Create(ctx context.Context, in MovieInput) (dbsqlc.Create
 func (s *MovieService) List(ctx context.Context) ([]dbsqlc.ListMoviesRow, error) {
 	return s.queries.ListMovies(ctx)
 }
+
+func (s *MovieService) Delete(ctx context.Context, id int32) error {
+	return s.queries.DeleteMovie(ctx, id)
+}
