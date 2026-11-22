@@ -9,23 +9,26 @@ Listar (GET /):
 
 ```
 Navegador  →  GET /
-main.go    →  queries.ListMovies (sqlc) trae las películas de PostgreSQL
+handler    →  service.List → queries.ListMovies (sqlc) trae las películas de PostgreSQL
 views      →  IndexPage(movies) arma la página con Layout + MovieForm + MovieList
-main.go    →  escribe el HTML en la respuesta
+handler    →  escribe el HTML en la respuesta
 ```
 
 Crear (patrón Post/Redirect/Get):
 
 ```
 Navegador  →  POST /movies  (formulario: title, description, release_date, duration)
-main.go    →  parsea y valida el formulario, queries.CreateMovie (sqlc) hace el INSERT
-main.go    →  303 See Other con Location: /
+handler    →  parsea el formulario HTTP y llama a service.Create
+service    →  valida las reglas de negocio y queries.CreateMovie (sqlc) hace el INSERT
+handler    →  303 See Other con Location: /
 Navegador  →  GET /   (muestra la lista actualizada)
 ```
 
 ## Estructura
 
-- `main.go`: servidor, handler de `GET /` y de `POST /movies`.
+- `main.go`: inicialización de configuración, conexión a la base de datos, inyección de dependencias y rutas del servidor.
+- `handler/`: handlers HTTP (`GET /` y `POST /movies`), parseo de formularios y renderizado de vistas.
+- `service/`: lógica de negocio y validación de reglas de dominio.
 - `views/`: componentes templ (`layout.templ`, `entity_form.templ`, `entity_list.templ`, `index_page.templ`).
 - `db/schema` y `db/queries`: esquema y consultas SQL; `db/sqlc` es el código que genera sqlc.
 - `config/`: lectura de variables de entorno.

@@ -13,16 +13,22 @@ BODY_FILE="$TMP_DIR/body"
 HEADERS_FILE="$TMP_DIR/headers"
 
 cleanup() {
-    echo
-    echo "=== Deteniendo servidor y limpiando contenedores/volúmenes ==="
-    bash ./stop-server.sh || true
-    bash ./stop-db.sh || true
     rm -rf "$TMP_DIR"
+    if [[ "${1:-}" != "--no-setup" ]]; then
+        echo
+        echo "=== Deteniendo servidor y limpiando contenedores/volúmenes ==="
+        bash ./stop-server.sh || true
+        bash ./stop-db.sh || true
+    fi
 }
-trap cleanup EXIT
 
-bash ./start-db.sh
-bash ./start-server.sh
+if [[ "${1:-}" == "--no-setup" ]]; then
+    trap 'cleanup --no-setup' EXIT
+else
+    trap cleanup EXIT
+    bash ./start-db.sh
+    bash ./start-server.sh
+fi
 
 FAILS=0
 CHECKS=0
