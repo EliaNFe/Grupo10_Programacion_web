@@ -13,6 +13,47 @@ templ Layout(title string) {
 				body > header { padding-bottom: 0; }
 				main { padding-top: 1rem; }
 				article { margin-bottom: 2rem; }
+
+				/* Adaptación para celulares */
+				@media (max-width: 768px) {
+					/* Oculta los encabezados de la tabla */
+					table thead {
+						display: none;
+					}
+
+					/* Convierte cada fila en una tarjeta independiente */
+					table tbody tr {
+						display: block;
+						border: 1px solid var(--pico-muted-border-color);
+						border-radius: var(--pico-border-radius);
+						margin-bottom: 1.25rem;
+						padding: 1rem;
+						background-color: var(--pico-card-background-color);
+					}
+
+					/* Apila cada dato uno debajo del otro */
+					table tbody td {
+						display: block;
+						padding: 0.35rem 0;
+						border: none;
+					}
+
+					/* El primer dato (el título) se destaca más grande */
+					table tbody td:first-child {
+						font-weight: bold;
+						font-size: 1.15rem;
+					}
+
+					/* En modo edición, apila los inputs cómodamente con margen */
+					table tbody tr.editing input {
+						margin-bottom: 0.75rem;
+					}
+
+					/* Los botones de acción ocupan todo el ancho en celular */
+					table tbody td:last-child div[role="group"] {
+						margin-top: 0.5rem;
+					}
+				}
 			</style>
 		</head>
 		<body>
