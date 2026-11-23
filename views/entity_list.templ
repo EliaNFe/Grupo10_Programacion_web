@@ -3,6 +3,7 @@ package views
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	dbsqlc "tp/db/sqlc"
 )
@@ -21,33 +22,89 @@ templ MovieList(movies []dbsqlc.ListMoviesRow) {
 							<th>Descripción</th>
 							<th>Estreno</th>
 							<th>Duración</th>
-							<th>Acciones</th>
+							<th style="width: 180px;">Acciones</th>
 						</tr>
 					</thead>
 					<tbody>
 						for _, m := range movies {
-							<tr>
-								<td>{ m.Title }</td>
-								<td>{ m.Description }</td>
-								<td>{ m.ReleaseDate.Format("2006-01-02") }</td>
-								<td>{ strconv.Itoa(int(m.Duration)) } min</td>
-								<td>
-									<button
-										class="secondary outline"
-										style="padding: 0.25rem 0.5rem; margin: 0; font-size: 0.85rem;"
-										hx-delete={ fmt.Sprintf("/movies/%d", m.ID) }
-										hx-target="closest tr"
-										hx-swap="outerHTML"
-										hx-confirm="¿Seguro que querés borrar esta película?"
-									>
-										Borrar
-									</button>
-								</td>
-							</tr>
+							@MovieRow(m.ID, m.Title, m.Description, m.ReleaseDate, m.Duration)
 						}
 					</tbody>
 				</table>
 			</figure>
 		}
 	</article>
+}
+
+// MovieRow es la fila normal de visualización
+templ MovieRow(id int32, title, description string, releaseDate time.Time, duration int32) {
+	<tr>
+		<td>{ title }</td>
+		<td>{ description }</td>
+		<td>{ releaseDate.Format("2006-01-02") }</td>
+		<td>{ strconv.Itoa(int(duration)) } min</td>
+		<td>
+			<div role="group" style="margin: 0;">
+				<button
+					class="outline"
+					style="padding: 0.25rem 0.5rem; margin: 0; font-size: 0.85rem;"
+					hx-get={ fmt.Sprintf("/movies/%d/edit", id) }
+					hx-target="closest tr"
+					hx-swap="outerHTML"
+				>
+					Editar
+				</button>
+				<button
+					class="secondary outline"
+					style="padding: 0.25rem 0.5rem; margin: 0; font-size: 0.85rem;"
+					hx-delete={ fmt.Sprintf("/movies/%d", id) }
+					hx-target="closest tr"
+					hx-swap="outerHTML"
+					hx-confirm="¿Seguro que querés borrar esta película?"
+				>
+					Borrar
+				</button>
+			</div>
+		</td>
+	</tr>
+}
+
+// MovieRowEdit es la fila en modo edición (con inputs)
+templ MovieRowEdit(id int32, title, description string, releaseDate time.Time, duration int32) {
+	<tr class="editing">
+		<td>
+			<input type="text" name="title" value={ title } required style="margin: 0;"/>
+		</td>
+		<td>
+			<input type="text" name="description" value={ description } required style="margin: 0;"/>
+		</td>
+		<td>
+			<input type="date" name="release_date" value={ releaseDate.Format("2006-01-02") } required style="margin: 0;"/>
+		</td>
+		<td>
+			<input type="number" name="duration" value={ strconv.Itoa(int(duration)) } min="1" required style="margin: 0;"/>
+		</td>
+		<td>
+			<div role="group" style="margin: 0;">
+				<button
+					style="padding: 0.25rem 0.5rem; margin: 0; font-size: 0.85rem;"
+					hx-put={ fmt.Sprintf("/movies/%d", id) }
+					hx-include="closest tr"
+					hx-target="closest tr"
+					hx-swap="outerHTML"
+				>
+					Guardar
+				</button>
+				<button
+					class="secondary outline"
+					style="padding: 0.25rem 0.5rem; margin: 0; font-size: 0.85rem;"
+					hx-get={ fmt.Sprintf("/movies/%d", id) }
+					hx-target="closest tr"
+					hx-swap="outerHTML"
+				>
+					Cancelar
+				</button>
+			</div>
+		</td>
+	</tr>
 }

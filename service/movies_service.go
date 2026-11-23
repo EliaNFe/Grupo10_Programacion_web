@@ -69,6 +69,30 @@ func (s *MovieService) Create(ctx context.Context, in MovieInput) (dbsqlc.Create
 	})
 }
 
+func (s *MovieService) Get(ctx context.Context, id int32) (dbsqlc.GetMovieByIDRow, error) {
+	return s.queries.GetMovieByID(ctx, id)
+}
+
+func (s *MovieService) Update(ctx context.Context, id int32, in MovieInput) (dbsqlc.GetMovieByIDRow, error) {
+	in, err := validate(in)
+	if err != nil {
+		return dbsqlc.GetMovieByIDRow{}, err
+	}
+
+	err = s.queries.UpdateMovie(ctx, dbsqlc.UpdateMovieParams{
+		ID:          id,
+		Title:       in.Title,
+		Description: in.Description,
+		ReleaseDate: in.ReleaseDate,
+		Duration:    in.Duration,
+	})
+	if err != nil {
+		return dbsqlc.GetMovieByIDRow{}, err
+	}
+
+	return s.queries.GetMovieByID(ctx, id)
+}
+
 func (s *MovieService) List(ctx context.Context) ([]dbsqlc.ListMoviesRow, error) {
 	return s.queries.ListMovies(ctx)
 }

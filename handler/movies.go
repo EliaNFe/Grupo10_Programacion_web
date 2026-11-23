@@ -137,3 +137,77 @@ func writeErrorPage(w http.ResponseWriter, status int, file string) {
 	w.WriteHeader(status)
 	w.Write(page)
 }
+
+// EditMovieForm atiende GET /movies/{id}/edit: devuelve la fila en modo edición (MovieRowEdit).
+func (h *Handler) EditMovieForm(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	movie, err := h.Service.Get(r.Context(), id)
+	if err != nil {
+		http.Error(w, "Película no encontrada", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	views.MovieRowEdit(movie.ID, movie.Title, movie.Description, movie.ReleaseDate, movie.Duration).Render(r.Context(), w)
+}
+
+// GetMovie atiende GET /movies/{id}: devuelve la fila normal (se usa al presionar "Cancelar").
+func (h *Handler) GetMovie(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	movie, err := h.Service.Get(r.Context(), id)
+	if err != nil {
+		http.Error(w, "Película no encontrada", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	views.MovieRow(movie.ID, movie.Title, movie.Description, movie.ReleaseDate, movie.Duration).Render(r.Context(), w)
+}
+
+// UpdateMovie atiende PUT /movies/{id}: parsea los datos, actualiza y devuelve la fila normal actualizada.
+func (h *Handler) UpdateMovie(w http.ResponseWriter, r *http.Request) {
+	id, err := parseID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	input, err := parseMovieForm(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	movie, err := h.Service.Update(r.Context(), id, input)
+	if err != nil {
+		var validationErr *service.ValidationError
+		if errors.As(err, &validationErr) {
+			http.Error(w, validationErr.Msg, http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "No se pudo actualizar la película", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	views.MovieRow(movie.ID, movie.Title, movie.Description, movie.ReleaseDate, movie.Duration).Render(r.Context(), w)
+}
+
+// parseID es un helper para extraer el id entero de la URL
+func parseID(r *http.Request) (int32, error) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 32)
+	if err != nil || id <= 0 {
+		return 0, errors.New("ID inválido")
+	}
+	return int32(id), nil
+}

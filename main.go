@@ -43,6 +43,9 @@ func main() {
 	http.HandleFunc("/", movieHandler.IndexPage)
 	http.HandleFunc("POST /movies", movieHandler.CreateMovie)
 	http.HandleFunc("DELETE /movies/{id}", movieHandler.DeleteMovie)
+	http.HandleFunc("GET /movies/{id}/edit", movieHandler.EditMovieForm)
+	http.HandleFunc("GET /movies/{id}", movieHandler.GetMovie)
+	http.HandleFunc("PUT /movies/{id}", movieHandler.UpdateMovie)
 
 	fmt.Printf("servidor escuchando en http://localhost%s\n", port)
 	if err := http.ListenAndServe(port, nil); err != nil {
